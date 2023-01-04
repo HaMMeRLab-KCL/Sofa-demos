@@ -9,14 +9,59 @@ sofa_directory = os.environ["SOFA_ROOT"]
 import pygame
 from OpenGL.GL import *
 from OpenGL.GLU import *
+import cv2
+from PIL import Image
 
 display_size = (1920, 1080)
-white = [255, 255, 255]
-red = [255, 0, 0]
-logo = pygame.image.load(os.path.join("imgs", "cair-cas-logo.png"))
-textureData = pygame.image.tostring(logo, "RGB", True)
+im_dir = "imgs/cair-cas-logo-alpha.png"
 
-def init_display(node: SC.Node):
+class ImageLoader:
+    
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        self.width = 0
+        self.height = 0
+        self.img_data = 0
+    
+    def load(self, im_dir):
+        image = pygame.image.load(im_dir).convert_alpha()
+        img_data = pygame.image.tostring(image, 'RGBA')
+        self.width = image.get_width()
+        self.height = image.get_height()
+
+        self.texID = glGenTextures(1)
+        glBindTexture(GL_TEXTURE_2D, self.texID)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, self.width, self.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data)
+        glGenerateMipmap(GL_TEXTURE_2D)
+        glBindTexture(GL_TEXTURE_2D, 0)     
+
+    def draw(self):
+
+        glMatrixMode(GL_MODELVIEW)
+        glLoadIdentity()
+        glTranslate(self.x, self.y, 0)
+
+        glEnable(GL_TEXTURE_2D)
+        glBindTexture(GL_TEXTURE_2D, self.texID)
+        glBegin(GL_QUADS)
+        glTexCoord2f(0, 0)
+        glVertex2f(0, 0)
+        glTexCoord2f(1, 0)
+        glVertex2f(self.width, 0)
+        glTexCoord2f(1, 1)
+        glVertex2f(self.width, self.height)
+        glTexCoord2f(0, 1)
+        glVertex2f(0, self.height)
+        glEnd()
+        glDisable(GL_TEXTURE_2D)
+
+
+def init_display(node: SC.Node, im_loader: ImageLoader):
     """
     Define the initial window for the pygame rendering
 
@@ -26,27 +71,42 @@ def init_display(node: SC.Node):
     pygame.display.init()
     pygame.display.set_mode(display_size, pygame.DOUBLEBUF | pygame.OPENGL)
     pygame.display.set_caption("Haptic demo")
+    glClearColor(1, 1, 1, 1)
     
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+
+    glMatrixMode(GL_PROJECTION)
+    glLoadIdentity()
+    gluOrtho2D(0, display_size[0], display_size[1], 1)
+    glMatrixMode(GL_MODELVIEW)
+
+    glLoadIdentity()
+    glDisable(GL_DEPTH_TEST)
+    glEnable(GL_BLEND)
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+    im_loader.load(im_dir)
+    im_loader.draw()
+
     glEnable(GL_LIGHTING)
     glEnable(GL_DEPTH_TEST)
     SG.glewInit()
     SS.initVisual(node)
     SS.initTextures(node)
+
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
     gluPerspective(45, (display_size[0] / display_size[1]), 0.1, 50.0)
     
     # Set the background to white
-    glClearColor(1, 1, 1, 1)
-    glClear(GL_COLOR_BUFFER_BIT)
+    # glClearColor(1, 1, 1, 1)
+    # glClear(GL_COLOR_BUFFER_BIT)
 
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
 
     pygame.display.flip()
 
-def simple_render(rootNode: SC.Node):
+def simple_render(rootNode: SC.Node, im_loader: ImageLoader):
     """
     Get the OpenGL context to render an image of the simulation state
 
@@ -54,6 +114,18 @@ def simple_render(rootNode: SC.Node):
         rootNode (SC.Node): Sofa root node 
     """
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+    
+    glMatrixMode(GL_PROJECTION)
+    glLoadIdentity()
+    gluOrtho2D(0, display_size[0], display_size[1], 1)
+    glMatrixMode(GL_MODELVIEW)
+
+    glLoadIdentity()
+    glDisable(GL_DEPTH_TEST)
+    glEnable(GL_BLEND)
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+    im_loader.draw()
+
     glEnable(GL_LIGHTING)
     glEnable(GL_DEPTH_TEST)
     
@@ -63,7 +135,6 @@ def simple_render(rootNode: SC.Node):
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
     
-
     cameraMVM = rootNode.camera.getOpenGLModelViewMatrix()
     glMultMatrixd(cameraMVM)
     SG.draw(rootNode)
@@ -98,8 +169,7 @@ def createScene(root: SC.Node):
     root.addObject("RequiredPlugin", name="SofaPython3")
     root.addObject("RequiredPlugin", name="Geomagic")
 
-    root.addObject("VisualStyle", displayFlags="showVisualModels showBehaviorModels hideCollisionModels")
-    root.addObject("BackgroundSetting", image="imgs/cair-cas-logo.png")
+    root.addObject("VisualStyle", displayFlags="showVisualModels hideBehaviorModels hideCollisionModels")
 
     root.addObject("DefaultPipeline", name="pipeline", depth=6, verbose=0)
     root.addObject("BruteForceBroadPhase")
@@ -111,56 +181,38 @@ def createScene(root: SC.Node):
     root.addObject("GeomagicDriver", name="GeomagicDevice", deviceName="Default Device", scale=2.0, drawDeviceFrame=0, positionBase=[0, 0, 0], orientationBase=[0, 0, 0, 1])
     # place light and a camera
     root.addObject("LightManager")
-    root.addObject("DirectionalLight", direction=[0,1,0])
+    root.addObject("DirectionalLight", direction=[0,1,0], color=[1, 0.85, 0.85])
     root.addObject("InteractiveCamera", name="camera", position=[0,20,0],
                             lookAt=[0,0,0], distance=37,
                             fieldOfView=45, zNear=0.63, zFar=55.69)
 
     #########################################
-    ############ SOFT SPHERE ################
+    ############# PINK BUNNY ################
     #########################################
 
-    soft_sphere = root.addChild("SoftSphere")
-    soft_sphere.addObject("EulerImplicitSolver", rayleighMass=0.01, rayleighStiffness=0.1)
-    soft_sphere.addObject("SparseLDLSolver", template="CompressedRowSparseMatrixMat3x3d")
-    soft_sphere.addObject("MeshOBJLoader", name="loaderS", filename="mesh/sphere_05.obj", scale3d=[0.05, 0.05, 0.05], translation=[-5,0,0])
-    soft_sphere.addObject("SparseGridRamificationTopology", name="grid", n=[6,6,6], src="@loaderS", nbVirtualFinerLevels=3, finestConnectivity=0)
-    soft_sphere.addObject("MechanicalObject", name="gridDof", position="@grid.position")
-    soft_sphere.addObject("TetrahedronFEMForceField", name="FEM", youngModulus=8e4, poissonRatio=0.45, method="large")
-    soft_sphere.addObject("DiagonalMass", totalMass=10.0, topology="@grid", geometryState="@gridDof")
-    soft_sphere.addObject("BoxROI", name="boxRoi1", box=[-5.6,-0.6,-0.6,-4.4,0.6,0.6], drawBoxes=1)
-    soft_sphere.addObject("FixedConstraint", indices="@boxRoi1.indices")
-    soft_sphere.addObject("LinearSolverConstraintCorrection")
+    bunny = root.addChild("bunny")
+    bunny.addObject("EulerImplicitSolver", rayleighMass=0.1, rayleighStiffness=0.1)
+    bunny.addObject("SparseLDLSolver")
+    bunny.addObject("MeshVTKLoader", name="loader", filename='mesh/Hollow_Stanford_Bunny.vtu')
+    bunny.addObject("TetrahedronSetTopologyContainer", src="@loader", name="container")
+    bunny.addObject("TetrahedronSetTopologyModifier")
+    bunny.addObject("MechanicalObject", name="tetras", template="Vec3d", showIndices=False, rx=-90)
+    bunny.addObject("UniformMass", totalMass=0.5)
+    bunny.addObject("TetrahedronFEMForceField", template="Vec3d", name="FEM", method="large", poissonRatio=0.3, youngModulus=2e5)
 
-    col_soft_sphere = soft_sphere.addChild("MappingSphere")
-    col_soft_sphere.addObject("MechanicalObject", name="dofs", position="@../loaderS.position")
-    col_soft_sphere.addObject("TriangleSetTopologyContainer", name="Container1", src="@../loaderS")
-    col_soft_sphere.addObject("TriangleSetTopologyModifier")
-    col_soft_sphere.addObject("TriangleSetGeometryAlgorithms", template="Vec3d")
-    col_soft_sphere.addObject("TriangleCollisionModel", bothSide=False, group=1, contactStiffness=1e5)
-    col_soft_sphere.addObject("LineCollisionModel", group=1, contactStiffness=1e5)
-    col_soft_sphere.addObject("PointCollisionModel", group=1, contactStiffness=1e5)
-    col_soft_sphere.addObject("BarycentricMapping", input="@../gridDof", output="@dofs")
+    bunny.addObject("BoxROI", name='boxROI', box=[-5, 5, 4.5, 5, -5, 5], drawBoxes=False, position='@tetras.rest_position', tetrahedra='@container.tetrahedra')
+    bunny.addObject('FixedConstraint', indices='@boxROI.indices')
+    bunny.addObject('LinearSolverConstraintCorrection')
 
-    visu_soft_sphere = soft_sphere.addChild("VisuSurface")
-    visu_soft_sphere.addObject("OglModel", name="Visual", color="blue", src="@../loaderS")
-    visu_soft_sphere.addObject("BarycentricMapping", input="@..", output="@Visual")
+    col_bunny = bunny.addChild('col')
+    col_bunny.addObject('TriangleSetTopologyContainer', name='container')
+    col_bunny.addObject('TriangleSetTopologyModifier')
+    col_bunny.addObject('Tetra2TriangleTopologicalMapping', name='mapping', input="@../container", output="@container")
+    col_bunny.addObject('TriangleCollisionModel', contactStiffness=10)
 
-    #########################################
-    ############ RIGID SPHERE ###############
-    #########################################
-    
-    rigid_sphere = root.addChild("RigidSphere")
-    rigid_sphere.addObject("MeshOBJLoader", name="loaderR", filename="mesh/sphere_05.obj", scale3d=[0.05,0.05,0.05], translation=[5,0,0])
-    rigid_sphere.addObject("MechanicalObject", position="@loaderR.position")
-    rigid_sphere.addObject("MeshTopology", name="grid", src="@loaderR")
-    rigid_sphere.addObject("TriangleCollisionModel", name="SphereTC", simulated=False, moving=False, bothSide=False, contactStiffness=1e5)
-    rigid_sphere.addObject("LineCollisionModel", name="SphereLC", simulated=False, moving=False, contactStiffness=1e5)
-    rigid_sphere.addObject("PointCollisionModel", name="SpherePC", simulated=False, moving=False, contactStiffness=1e5)
-
-    visu_rigid_sphere = rigid_sphere.addChild("SphereVisu")
-    visu_rigid_sphere.addObject("OglModel", name="SphereVisualModel", src='@../loaderR', color='gray')
-    visu_rigid_sphere.addObject("BarycentricMapping", input='@..', output='@SphereVisualModel')
+    visu_bunny = col_bunny.addChild('visu')
+    visu_bunny.addObject('OglModel', name='Visual', color=[1, 0.87, 0.87, 1])
+    visu_bunny.addObject('IdentityMapping', input='@../../tetras', output='@Visual')
 
     #########################################
     ############## TOUCH X ##################
@@ -179,35 +231,36 @@ def createScene(root: SC.Node):
     instrument.addObject("MechanicalObject", name="instrumentState", template="Rigid3d")
     instrument.addObject("UniformMass", name="mass", totalMass=0.01)
     instrument.addObject("RestShapeSpringsForceField", stiffness=1e6, angularStiffness=1e6, external_rest_shape='@../Omni/DOFs', points=0, external_points=0)
-    instrument.addObject("LCPForceFeedback", activate=True, forceCoef=3e-4)
+    instrument.addObject("LCPForceFeedback", activate=True, forceCoef=1e-4)
     instrument.addObject("LinearSolverConstraintCorrection")
 
     visu_instrument = instrument.addChild("VisualModel")
     visu_instrument.addObject("MeshOBJLoader", name="meshLoader_1", filename="Demos/Dentistry/data/mesh/dental_instrument.obj", handleSeams=1)
-    visu_instrument.addObject("OglModel", name="InstrumentVisualModel", src="@meshLoader_1", color="1.0 0.2 0.2 1.0", ry=-180, rz=-90, dz=3.5, dx=-0.3)
+    visu_instrument.addObject("OglModel", name="InstrumentVisualModel", src="@meshLoader_1", color="0.2 0.2 1.0 1.0", ry=-180, rz=-90, dz=3.5, dx=-0.3)
     visu_instrument.addObject("RigidMapping", name="MM->VM mapping", input="@instrumentState", output="@InstrumentVisualModel")
 
     col_instrument = instrument.addChild("CollisionModel")
     col_instrument.addObject("MeshOBJLoader", filename="Demos/Dentistry/data/mesh/dental_instrument_centerline.obj", name="loader")
     col_instrument.addObject("MeshTopology", src="@loader", name="InstrumentCollisionModel")
     col_instrument.addObject("MechanicalObject", src="@loader", name="instrumentCollisionState", ry=-180, rz=-90, dz=3.5, dx=-0.3)
-    col_instrument.addObject("LineCollisionModel", contactStiffness=100)
-    col_instrument.addObject("PointCollisionModel", contactStiffness=100)
+    col_instrument.addObject("LineCollisionModel", contactStiffness=10)
+    col_instrument.addObject("PointCollisionModel", contactStiffness=10)
     col_instrument.addObject("RigidMapping", name="MM->CM mapping", input="@instrumentState", output="@instrumentCollisionState")
 
 
 def main():
     SofaRuntime.importPlugin("SofaComponentAll")
+    im_loader = ImageLoader(50, 50)
     root = SC.Node("root")
     createScene(root)
     SS.init(root)
-    init_display(root)
+    init_display(root, im_loader)
 
     try:
         while True:
             SS.animate(root, root.getDt())
             SS.updateVisual(root)
-            simple_render(root)
+            simple_render(root, im_loader)
             time.sleep(root.getDt())
     except KeyboardInterrupt:
         pass
