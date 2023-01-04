@@ -13,6 +13,8 @@ from OpenGL.GLU import *
 display_size = (1920, 1080)
 white = [255, 255, 255]
 red = [255, 0, 0]
+logo = pygame.image.load(os.path.join("imgs", "cair-cas-logo.png"))
+textureData = pygame.image.tostring(logo, "RGB", True)
 
 def init_display(node: SC.Node):
     """
@@ -34,10 +36,14 @@ def init_display(node: SC.Node):
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
     gluPerspective(45, (display_size[0] / display_size[1]), 0.1, 50.0)
+    
+    # Set the background to white
+    glClearColor(1, 1, 1, 1)
+    glClear(GL_COLOR_BUFFER_BIT)
 
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
-    pygame.display.get_surface().fill(red)
+
     pygame.display.flip()
 
 def simple_render(rootNode: SC.Node):
@@ -50,18 +56,20 @@ def simple_render(rootNode: SC.Node):
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
     glEnable(GL_LIGHTING)
     glEnable(GL_DEPTH_TEST)
+    
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
     gluPerspective(45, (display_size[0] / display_size[1]), 0.1, 50.0)
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
+    
 
     cameraMVM = rootNode.camera.getOpenGLModelViewMatrix()
     glMultMatrixd(cameraMVM)
     SG.draw(rootNode)
 
-    pygame.display.get_surface().fill(red)
     pygame.display.flip()
+
 
 def createScene(root: SC.Node):
     """
@@ -91,6 +99,7 @@ def createScene(root: SC.Node):
     root.addObject("RequiredPlugin", name="Geomagic")
 
     root.addObject("VisualStyle", displayFlags="showVisualModels showBehaviorModels hideCollisionModels")
+    root.addObject("BackgroundSetting", image="imgs/cair-cas-logo.png")
 
     root.addObject("DefaultPipeline", name="pipeline", depth=6, verbose=0)
     root.addObject("BruteForceBroadPhase")
@@ -99,7 +108,7 @@ def createScene(root: SC.Node):
     root.addObject("LocalMinDistance", name="proximity", alarmDistance=0.15, contactDistance=0.05, angleCone=0.0)
     root.addObject("FreeMotionAnimationLoop")
     root.addObject("LCPConstraintSolver", tolerance=0.001, maxIt=1000)
-    root.addObject("GeomagicDriver", name="GeomagicDevice", deviceName="Default Device", scale=2.0, drawDeviceFrame=False, positionBase=[0, 0, 0], orientationBase=[0.707, 0, 0, -0.707])
+    root.addObject("GeomagicDriver", name="GeomagicDevice", deviceName="Default Device", scale=2.0, drawDeviceFrame=0, positionBase=[0, 0, 0], orientationBase=[0, 0, 0, 1])
     # place light and a camera
     root.addObject("LightManager")
     root.addObject("DirectionalLight", direction=[0,1,0])
@@ -170,7 +179,7 @@ def createScene(root: SC.Node):
     instrument.addObject("MechanicalObject", name="instrumentState", template="Rigid3d")
     instrument.addObject("UniformMass", name="mass", totalMass=0.01)
     instrument.addObject("RestShapeSpringsForceField", stiffness=1e6, angularStiffness=1e6, external_rest_shape='@../Omni/DOFs', points=0, external_points=0)
-    instrument.addObject("LCPForceFeedback", activate=True, forceCoef=5e-5)
+    instrument.addObject("LCPForceFeedback", activate=True, forceCoef=3e-4)
     instrument.addObject("LinearSolverConstraintCorrection")
 
     visu_instrument = instrument.addChild("VisualModel")
@@ -182,8 +191,8 @@ def createScene(root: SC.Node):
     col_instrument.addObject("MeshOBJLoader", filename="Demos/Dentistry/data/mesh/dental_instrument_centerline.obj", name="loader")
     col_instrument.addObject("MeshTopology", src="@loader", name="InstrumentCollisionModel")
     col_instrument.addObject("MechanicalObject", src="@loader", name="instrumentCollisionState", ry=-180, rz=-90, dz=3.5, dx=-0.3)
-    col_instrument.addObject("LineCollisionModel", contactStiffness=10)
-    col_instrument.addObject("PointCollisionModel", contactStiffness=10)
+    col_instrument.addObject("LineCollisionModel", contactStiffness=100)
+    col_instrument.addObject("PointCollisionModel", contactStiffness=100)
     col_instrument.addObject("RigidMapping", name="MM->CM mapping", input="@instrumentState", output="@instrumentCollisionState")
 
 
