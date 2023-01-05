@@ -199,7 +199,7 @@ def createScene(root: SC.Node):
     bunny.addObject("TetrahedronFEMForceField", template="Vec3d", name="FEM", method="large", poissonRatio=0.35, youngModulus=2e5)
 
     bunny.addObject("BoxROI", name='boxROI', box=[-5, 5, 4.5, 5, -5, 5], drawBoxes=False, position='@tetras.rest_position', tetrahedra='@container.tetrahedra')
-    bunny.addObject('FixedConstraint', indices='@boxROI.indices')
+    bunny.addObject('RestShapeSpringsForceField', points='@boxROI.indices', stiffness=1e6, angularStiffness=1e6)
     bunny.addObject('LinearSolverConstraintCorrection')
 
     col_bunny = bunny.addChild('col')
@@ -230,7 +230,7 @@ def createScene(root: SC.Node):
     instrument.addObject("MechanicalObject", name="instrumentState", template="Rigid3d")
     instrument.addObject("UniformMass", name="mass", totalMass=0.01)
     instrument.addObject("RestShapeSpringsForceField", stiffness=1e6, angularStiffness=1e6, external_rest_shape='@../Omni/DOFs', points=0, external_points=0)
-    instrument.addObject("LCPForceFeedback", activate=True, forceCoef=3e-4)
+    instrument.addObject("LCPForceFeedback", activate=True, forceCoef=2.5e-4)
     instrument.addObject("LinearSolverConstraintCorrection")
 
     visu_instrument = instrument.addChild("VisualModel")
@@ -242,8 +242,8 @@ def createScene(root: SC.Node):
     col_instrument.addObject("MeshOBJLoader", filename="Demos/Dentistry/data/mesh/dental_instrument_centerline.obj", name="loader")
     col_instrument.addObject("MeshTopology", src="@loader", name="InstrumentCollisionModel")
     col_instrument.addObject("MechanicalObject", src="@loader", name="instrumentCollisionState", ry=-180, rz=-90, dy=5, dz=3.5, dx=-0.3, scale=1.2)
-    col_instrument.addObject("LineCollisionModel", contactStiffness=1e4)
-    col_instrument.addObject("PointCollisionModel", contactStiffness=1e4)
+    col_instrument.addObject("LineCollisionModel", contactStiffness=1e2)
+    col_instrument.addObject("PointCollisionModel", contactStiffness=1e2)
     col_instrument.addObject("RigidMapping", name="MM->CM mapping", input="@instrumentState", output="@instrumentCollisionState")
 
 
