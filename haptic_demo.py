@@ -9,8 +9,6 @@ sofa_directory = os.environ["SOFA_ROOT"]
 import pygame
 from OpenGL.GL import *
 from OpenGL.GLU import *
-import cv2
-from PIL import Image
 
 display_size = (1920, 1080)
 im_dir = "imgs/cair-cas-logo-alpha.png"
@@ -175,15 +173,15 @@ def createScene(root: SC.Node):
     root.addObject("BruteForceBroadPhase")
     root.addObject("BVHNarrowPhase")
     root.addObject("DefaultContactManager", name="response", response="FrictionContactConstraint")
-    root.addObject("LocalMinDistance", name="proximity", alarmDistance=0.15, contactDistance=0.05, angleCone=0.0)
+    root.addObject("LocalMinDistance", name="proximity", alarmDistance=0.3, contactDistance=0.15, angleCone=0.0)
     root.addObject("FreeMotionAnimationLoop")
-    root.addObject("LCPConstraintSolver", tolerance=0.001, maxIt=1000)
-    root.addObject("GeomagicDriver", name="GeomagicDevice", deviceName="Default Device", scale=2.0, drawDeviceFrame=0, positionBase=[0, 0, 0], orientationBase=[0, 0, 0, 1])
+    root.addObject("LCPConstraintSolver", tolerance=1e-3, maxIt=1e3)
+    root.addObject("GeomagicDriver", name="GeomagicDevice", deviceName="Default Device", scale=2.0, drawDeviceFrame=0, positionBase=[0, 0, 0], orientationBase=[0.707, 0, 0, -0.707])
     # place light and a camera
     root.addObject("LightManager")
-    root.addObject("DirectionalLight", direction=[0,1,0], color=[1, 0.85, 0.85])
-    root.addObject("InteractiveCamera", name="camera", position=[0,20,0],
-                            lookAt=[0,0,0], distance=37,
+    root.addObject("DirectionalLight", direction=[0,1,0], color=[1,0.85,0.85])
+    root.addObject("InteractiveCamera", name="camera", position=[0,17.5,0],
+                            lookAt=[0,0,0], distance=30,
                             fieldOfView=45, zNear=0.63, zFar=55.69)
 
     #########################################
@@ -192,13 +190,13 @@ def createScene(root: SC.Node):
 
     bunny = root.addChild("bunny")
     bunny.addObject("EulerImplicitSolver", rayleighMass=0.1, rayleighStiffness=0.1)
-    bunny.addObject("SparseLDLSolver")
+    bunny.addObject("SparseLDLSolver", template="CompressedRowSparseMatrixMat3x3d")
     bunny.addObject("MeshVTKLoader", name="loader", filename='mesh/Hollow_Stanford_Bunny.vtu')
     bunny.addObject("TetrahedronSetTopologyContainer", src="@loader", name="container")
     bunny.addObject("TetrahedronSetTopologyModifier")
     bunny.addObject("MechanicalObject", name="tetras", template="Vec3d", showIndices=False, rx=-90)
     bunny.addObject("UniformMass", totalMass=0.5)
-    bunny.addObject("TetrahedronFEMForceField", template="Vec3d", name="FEM", method="large", poissonRatio=0.3, youngModulus=2e5)
+    bunny.addObject("TetrahedronFEMForceField", template="Vec3d", name="FEM", method="large", poissonRatio=0.35, youngModulus=2e5)
 
     bunny.addObject("BoxROI", name='boxROI', box=[-5, 5, 4.5, 5, -5, 5], drawBoxes=False, position='@tetras.rest_position', tetrahedra='@container.tetrahedra')
     bunny.addObject('FixedConstraint', indices='@boxROI.indices')
@@ -208,7 +206,8 @@ def createScene(root: SC.Node):
     col_bunny.addObject('TriangleSetTopologyContainer', name='container')
     col_bunny.addObject('TriangleSetTopologyModifier')
     col_bunny.addObject('Tetra2TriangleTopologicalMapping', name='mapping', input="@../container", output="@container")
-    col_bunny.addObject('TriangleCollisionModel', contactStiffness=10)
+    col_bunny.addObject('TriangleCollisionModel', contactStiffness=1e3)
+    col_bunny.addObject('PointCollisionModel', contactStiffness=1e3)
 
     visu_bunny = col_bunny.addChild('visu')
     visu_bunny.addObject('OglModel', name='Visual', color=[1, 0.87, 0.87, 1])
@@ -231,20 +230,20 @@ def createScene(root: SC.Node):
     instrument.addObject("MechanicalObject", name="instrumentState", template="Rigid3d")
     instrument.addObject("UniformMass", name="mass", totalMass=0.01)
     instrument.addObject("RestShapeSpringsForceField", stiffness=1e6, angularStiffness=1e6, external_rest_shape='@../Omni/DOFs', points=0, external_points=0)
-    instrument.addObject("LCPForceFeedback", activate=True, forceCoef=1e-4)
+    instrument.addObject("LCPForceFeedback", activate=True, forceCoef=3e-4)
     instrument.addObject("LinearSolverConstraintCorrection")
 
     visu_instrument = instrument.addChild("VisualModel")
     visu_instrument.addObject("MeshOBJLoader", name="meshLoader_1", filename="Demos/Dentistry/data/mesh/dental_instrument.obj", handleSeams=1)
-    visu_instrument.addObject("OglModel", name="InstrumentVisualModel", src="@meshLoader_1", color="0.2 0.2 1.0 1.0", ry=-180, rz=-90, dz=3.5, dx=-0.3)
+    visu_instrument.addObject("OglModel", name="InstrumentVisualModel", src="@meshLoader_1", color="0.2 0.2 1.0 1.0", ry=-180, rz=-90, dy=5, dz=3.5, dx=-0.3, scale=1.2)
     visu_instrument.addObject("RigidMapping", name="MM->VM mapping", input="@instrumentState", output="@InstrumentVisualModel")
 
     col_instrument = instrument.addChild("CollisionModel")
     col_instrument.addObject("MeshOBJLoader", filename="Demos/Dentistry/data/mesh/dental_instrument_centerline.obj", name="loader")
     col_instrument.addObject("MeshTopology", src="@loader", name="InstrumentCollisionModel")
-    col_instrument.addObject("MechanicalObject", src="@loader", name="instrumentCollisionState", ry=-180, rz=-90, dz=3.5, dx=-0.3)
-    col_instrument.addObject("LineCollisionModel", contactStiffness=10)
-    col_instrument.addObject("PointCollisionModel", contactStiffness=10)
+    col_instrument.addObject("MechanicalObject", src="@loader", name="instrumentCollisionState", ry=-180, rz=-90, dy=5, dz=3.5, dx=-0.3, scale=1.2)
+    col_instrument.addObject("LineCollisionModel", contactStiffness=1e4)
+    col_instrument.addObject("PointCollisionModel", contactStiffness=1e4)
     col_instrument.addObject("RigidMapping", name="MM->CM mapping", input="@instrumentState", output="@instrumentCollisionState")
 
 
