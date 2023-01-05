@@ -11,7 +11,8 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 
 display_size = (1920, 1080)
-im_dir = "imgs/cair-cas-logo-alpha.png"
+cair_logo_dir = "imgs/cair-cas-logo-alpha.png"
+cas_logo_dir = "imgs/CAS_logo.png"
 
 class ImageLoader:
     
@@ -59,7 +60,7 @@ class ImageLoader:
         glDisable(GL_TEXTURE_2D)
 
 
-def init_display(node: SC.Node, im_loader: ImageLoader):
+def init_display(node: SC.Node, im_loader_cair: ImageLoader, im_loader_cas: ImageLoader):
     """
     Define the initial window for the pygame rendering
 
@@ -82,8 +83,10 @@ def init_display(node: SC.Node, im_loader: ImageLoader):
     glDisable(GL_DEPTH_TEST)
     glEnable(GL_BLEND)
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-    im_loader.load(im_dir)
-    im_loader.draw()
+    im_loader_cair.load(cair_logo_dir)
+    im_loader_cair.draw()
+    im_loader_cas.load(cas_logo_dir)
+    im_loader_cas.draw()
 
     glEnable(GL_LIGHTING)
     glEnable(GL_DEPTH_TEST)
@@ -104,7 +107,7 @@ def init_display(node: SC.Node, im_loader: ImageLoader):
 
     pygame.display.flip()
 
-def simple_render(rootNode: SC.Node, im_loader: ImageLoader):
+def simple_render(rootNode: SC.Node, im_loader_cair: ImageLoader, im_loader_cas: ImageLoader):
     """
     Get the OpenGL context to render an image of the simulation state
 
@@ -122,7 +125,8 @@ def simple_render(rootNode: SC.Node, im_loader: ImageLoader):
     glDisable(GL_DEPTH_TEST)
     glEnable(GL_BLEND)
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-    im_loader.draw()
+    im_loader_cair.draw()
+    im_loader_cas.draw()
 
     glEnable(GL_LIGHTING)
     glEnable(GL_DEPTH_TEST)
@@ -173,7 +177,7 @@ def createScene(root: SC.Node):
     root.addObject("BruteForceBroadPhase")
     root.addObject("BVHNarrowPhase")
     root.addObject("DefaultContactManager", name="response", response="FrictionContactConstraint")
-    root.addObject("LocalMinDistance", name="proximity", alarmDistance=0.3, contactDistance=0.15, angleCone=0.0)
+    root.addObject("LocalMinDistance", name="proximity", alarmDistance=0.2, contactDistance=0.15, angleCone=0.0)
     root.addObject("FreeMotionAnimationLoop")
     root.addObject("LCPConstraintSolver", tolerance=1e-3, maxIt=1e3)
     root.addObject("GeomagicDriver", name="GeomagicDevice", deviceName="Default Device", scale=2.0, drawDeviceFrame=0, positionBase=[0, 0, 0], orientationBase=[0.707, 0, 0, -0.707])
@@ -206,8 +210,8 @@ def createScene(root: SC.Node):
     col_bunny.addObject('TriangleSetTopologyContainer', name='container')
     col_bunny.addObject('TriangleSetTopologyModifier')
     col_bunny.addObject('Tetra2TriangleTopologicalMapping', name='mapping', input="@../container", output="@container")
-    col_bunny.addObject('TriangleCollisionModel', contactStiffness=1e3)
-    col_bunny.addObject('PointCollisionModel', contactStiffness=1e3)
+    col_bunny.addObject('TriangleCollisionModel', contactStiffness=1e4)
+    col_bunny.addObject('PointCollisionModel', contactStiffness=1e4)
 
     visu_bunny = col_bunny.addChild('visu')
     visu_bunny.addObject('OglModel', name='Visual', color=[1, 0.87, 0.87, 1])
@@ -249,17 +253,18 @@ def createScene(root: SC.Node):
 
 def main():
     SofaRuntime.importPlugin("SofaComponentAll")
-    im_loader = ImageLoader(50, 50)
+    im_loader_cair = ImageLoader(50, 50)
+    im_loader_cas = ImageLoader(1600, 40)
     root = SC.Node("root")
     createScene(root)
     SS.init(root)
-    init_display(root, im_loader)
+    init_display(root, im_loader_cair, im_loader_cas)
 
     try:
         while True:
             SS.animate(root, root.getDt())
             SS.updateVisual(root)
-            simple_render(root, im_loader)
+            simple_render(root, im_loader_cair, im_loader_cas)
             time.sleep(root.getDt())
     except KeyboardInterrupt:
         pass
