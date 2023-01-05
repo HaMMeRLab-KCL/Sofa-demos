@@ -73,7 +73,7 @@ def init_display(node: SC.Node, im_loader_cair: ImageLoader, im_loader_cas: Imag
         node (SC.Node): Root node for a Sofa simulation scene
     """
     pygame.display.init()
-    pygame.display.set_mode(display_size, flags)
+    pygame.display.set_mode(display_size, deb_flags)
     pygame.display.set_caption("Haptic demo")
     glClearColor(1, 1, 1, 1)
     
@@ -147,6 +147,7 @@ def simple_render(rootNode: SC.Node, im_loader_cair: ImageLoader, im_loader_cas:
     SG.draw(rootNode)
 
     pygame.display.flip()
+
 
 
 def createScene(root: SC.Node):

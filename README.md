@@ -2,7 +2,7 @@
 
 This repository contains some simple haptic demos in [SOFA](https://www.sofa-framework.org/) to use for demonstrations or university tours. It requires from a *3DSystem* Haptic device. The demo has been tested using the **TouchX** device. It can be adapted to be used with a **Novint Falcon**, but it will require additional work and a different SOFA plugin.
 
-![simualtion snapshot](imgs/simulation_snapshot.png)
+![simualtion snapshot](imgs/simulation.gif)
 
 ## Pre-requisites
 
