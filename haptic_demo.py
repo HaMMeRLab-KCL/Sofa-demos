@@ -10,9 +10,14 @@ import pygame
 from OpenGL.GL import *
 from OpenGL.GLU import *
 
+# Directory to the different logos
+cair_logo_dir = "logos/CAIR_logo.png"
+cas_logo_dir = "logos/CAS_logo.png"
+
+# Create the pygame widnow size and flags for debugging and final demo
 display_size = (1920, 1080)
-cair_logo_dir = "imgs/cair-cas-logo-alpha.png"
-cas_logo_dir = "imgs/CAS_logo.png"
+deb_flags = pygame.DOUBLEBUF | pygame.OPENGL
+flags = pygame.DOUBLEBUF | pygame.OPENGL | pygame.FULLSCREEN
 
 class ImageLoader:
     
@@ -68,7 +73,7 @@ def init_display(node: SC.Node, im_loader_cair: ImageLoader, im_loader_cas: Imag
         node (SC.Node): Root node for a Sofa simulation scene
     """
     pygame.display.init()
-    pygame.display.set_mode(display_size, pygame.DOUBLEBUF | pygame.OPENGL)
+    pygame.display.set_mode(display_size, flags)
     pygame.display.set_caption("Haptic demo")
     glClearColor(1, 1, 1, 1)
     
@@ -210,8 +215,9 @@ def createScene(root: SC.Node):
     col_bunny.addObject('TriangleSetTopologyContainer', name='container')
     col_bunny.addObject('TriangleSetTopologyModifier')
     col_bunny.addObject('Tetra2TriangleTopologicalMapping', name='mapping', input="@../container", output="@container")
-    col_bunny.addObject('TriangleCollisionModel', contactStiffness=1e4)
-    col_bunny.addObject('PointCollisionModel', contactStiffness=1e4)
+    col_bunny.addObject('TriangleCollisionModel', contactStiffness=1e5, group=1)
+    col_bunny.addObject("LineCollisionModel", contactStiffness=1e5, group=1)
+    col_bunny.addObject('PointCollisionModel', contactStiffness=1e5, group=1)
 
     visu_bunny = col_bunny.addChild('visu')
     visu_bunny.addObject('OglModel', name='Visual', color=[1, 0.87, 0.87, 1])
@@ -234,7 +240,7 @@ def createScene(root: SC.Node):
     instrument.addObject("MechanicalObject", name="instrumentState", template="Rigid3d")
     instrument.addObject("UniformMass", name="mass", totalMass=0.01)
     instrument.addObject("RestShapeSpringsForceField", stiffness=1e6, angularStiffness=1e6, external_rest_shape='@../Omni/DOFs', points=0, external_points=0)
-    instrument.addObject("LCPForceFeedback", activate=True, forceCoef=2.5e-4)
+    instrument.addObject("LCPForceFeedback", activate=True, forceCoef=1e-4)
     instrument.addObject("LinearSolverConstraintCorrection")
 
     visu_instrument = instrument.addChild("VisualModel")
@@ -246,28 +252,33 @@ def createScene(root: SC.Node):
     col_instrument.addObject("MeshOBJLoader", filename="Demos/Dentistry/data/mesh/dental_instrument_centerline.obj", name="loader")
     col_instrument.addObject("MeshTopology", src="@loader", name="InstrumentCollisionModel")
     col_instrument.addObject("MechanicalObject", src="@loader", name="instrumentCollisionState", ry=-180, rz=-90, dy=5, dz=3.5, dx=-0.3, scale=1.2)
-    col_instrument.addObject("LineCollisionModel", contactStiffness=1e2)
-    col_instrument.addObject("PointCollisionModel", contactStiffness=1e2)
+    col_instrument.addObject("LineCollisionModel", contactStiffness=1e3)
+    col_instrument.addObject("PointCollisionModel", contactStiffness=1e3)
     col_instrument.addObject("RigidMapping", name="MM->CM mapping", input="@instrumentState", output="@instrumentCollisionState")
 
 
 def main():
     SofaRuntime.importPlugin("SofaComponentAll")
-    im_loader_cair = ImageLoader(50, 50)
-    im_loader_cas = ImageLoader(1600, 40)
+    im_loader_cair = ImageLoader(20, 20)
+    im_loader_cas = ImageLoader(1630, 30)
     root = SC.Node("root")
     createScene(root)
     SS.init(root)
     init_display(root, im_loader_cair, im_loader_cas)
+    done = False
 
-    try:
-        while True:
-            SS.animate(root, root.getDt())
-            SS.updateVisual(root)
-            simple_render(root, im_loader_cair, im_loader_cas)
-            time.sleep(root.getDt())
-    except KeyboardInterrupt:
-        pass
+    while not done:
+        SS.animate(root, root.getDt())
+        SS.updateVisual(root)
+        simple_render(root, im_loader_cair, im_loader_cas)
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    done = True
+                    break
+        time.sleep(root.getDt())
 
+    pygame.quit()
 if __name__ == "__main__":
     main()
+    
