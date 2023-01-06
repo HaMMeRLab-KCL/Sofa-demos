@@ -75,6 +75,7 @@ def init_display(node: SC.Node, im_loader_cair: ImageLoader, im_loader_cas: Imag
     pygame.display.init()
     pygame.display.set_mode(display_size, flags)
     pygame.display.set_caption("Haptic demo")
+    pygame.mouse.set_visible(False)
     glClearColor(1, 1, 1, 1)
     
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
