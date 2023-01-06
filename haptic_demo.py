@@ -73,7 +73,7 @@ def init_display(node: SC.Node, im_loader_cair: ImageLoader, im_loader_cas: Imag
         node (SC.Node): Root node for a Sofa simulation scene
     """
     pygame.display.init()
-    pygame.display.set_mode(display_size, deb_flags)
+    pygame.display.set_mode(display_size, flags)
     pygame.display.set_caption("Haptic demo")
     glClearColor(1, 1, 1, 1)
     
@@ -260,7 +260,7 @@ def createScene(root: SC.Node):
 
 def main():
     SofaRuntime.importPlugin("SofaComponentAll")
-    im_loader_cair = ImageLoader(20, 20)
+    im_loader_cair = ImageLoader(10, 5)
     im_loader_cas = ImageLoader(1630, 30)
     root = SC.Node("root")
     createScene(root)
