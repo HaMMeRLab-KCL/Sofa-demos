@@ -17,6 +17,10 @@ conda activate pySOFA
 pip install -r requirements.txt
 ```
 
+## Running the simulation
+
+Open a terminal, activate the *pySOFA* conda environment and run the python file. `python pathtofolder/haptic_demp.py`.
+
 ## Resources
 
 1. [SOFA](https://www.sofa-framework.org/)
