@@ -19,7 +19,7 @@ pip install -r requirements.txt
 
 ## Running the simulation
 
-Open a terminal, activate the *pySOFA* conda environment and run the python file. `python pathtofolder/haptic_demp.py`.
+Open a terminal, activate the *pySOFA* conda environment and run the python file. `python pathtofolder/haptic_demo.py`.
 
 ## Resources
 
