@@ -178,7 +178,7 @@ def createScene(root: SC.Node):
     root.addObject("RequiredPlugin", name="SofaPython3")
     root.addObject("RequiredPlugin", name="Geomagic")
 
-    root.addObject("VisualStyle", displayFlags="showVisualModels hideBehaviorModels hideCollisionModels")
+    root.addObject("VisualStyle", displayFlags="showVisualModels hideSBehaviorModels hideCollisionModels")
 
     root.addObject("DefaultPipeline", name="pipeline", depth=6, verbose=0)
     root.addObject("BruteForceBroadPhase")
@@ -187,7 +187,7 @@ def createScene(root: SC.Node):
     root.addObject("LocalMinDistance", name="proximity", alarmDistance=0.2, contactDistance=0.15, angleCone=0.0)
     root.addObject("FreeMotionAnimationLoop")
     root.addObject("LCPConstraintSolver", tolerance=1e-3, maxIt=1e3)
-    root.addObject("GeomagicDriver", name="GeomagicDevice", deviceName="Default Device", scale=2.0, drawDeviceFrame=0, positionBase=[0, 0, 0], orientationBase=[0.707, 0, 0, -0.707])
+    root.addObject("GeomagicDriver", name="GeomagicDevice", deviceName="Default Device", scale=1.0, drawDeviceFrame=0, positionBase=[0, 0, 0], orientationBase=[0.707, 0, 0, -0.707])
     # place light and a camera
     root.addObject("LightManager")
     root.addObject("DirectionalLight", direction=[0,1,0], color=[1,0.85,0.85])
@@ -261,8 +261,8 @@ def createScene(root: SC.Node):
 
 def main():
     SofaRuntime.importPlugin("SofaComponentAll")
-    im_loader_cair = ImageLoader(10, 5)
-    im_loader_cas = ImageLoader(1630, 30)
+    im_loader_cair = ImageLoader(20, 10)
+    im_loader_cas = ImageLoader(1650, 40)
     root = SC.Node("root")
     createScene(root)
     SS.init(root)
